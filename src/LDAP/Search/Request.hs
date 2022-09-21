@@ -3,6 +3,7 @@ module LDAP.Search.Request where
 import LDAP.Schema.DistinguishedName
 import LDAP.Search.Filter
 
+-- https://datatracker.ietf.org/doc/html/rfc4511#section-4.5.1
 data SearchRequest = SearchRequest
     { baseObject :: DistinguishedName
     , scope :: Scope
@@ -15,12 +16,14 @@ data SearchRequest = SearchRequest
     }
     deriving (Show)
 
+-- https://datatracker.ietf.org/doc/html/rfc4511#section-4.5.1
 data Scope
     = BaseObjectScope
     | SingleLevelScope
     | WholeSubtreeScope
     deriving (Show)
 
+-- https://datatracker.ietf.org/doc/html/rfc4511#section-4.5.1
 data DerefAliases
     = NeverDerefAliases
     | DerefInSearching
@@ -28,6 +31,8 @@ data DerefAliases
     | DerefAlways
     deriving (Show)
 
+-- https://datatracker.ietf.org/doc/html/rfc4511#section-4.5.1.8
+-- TODO: should we allow multiple attrs / noattrs / allattrs?
 data AttributeSelector
     = Attrs [AttributeDescription]
     | NoAttrs

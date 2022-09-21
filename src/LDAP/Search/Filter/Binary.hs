@@ -1,49 +1,146 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module LDAP.Search.Filter.Binary where
 
+import Codec.Binary.UTF8.Generic (UTF8Bytes)
+import Control.Applicative (many, Alternative((<|>)))
 import Data.Binary
-import Data.Binary.Parser
-import Data.Foldable (asum)
+import Data.Binary.Parser hiding (isDigit, isHexDigit)
+import Data.Char (isAlpha, isDigit, isHexDigit, chr)
+import Data.Foldable (asum, toList)
+import Data.List (intersperse, intercalate)
+import Data.List.NonEmpty (NonEmpty(..), fromList)
+import Data.Text (Text)
+import Data.Binary.Parser.Char8 (char)
 import LDAP.Search.Filter
+import qualified Codec.Binary.UTF8.Generic as UTF8
+import qualified Data.Binary.Parser.Char8 as Char8
+import qualified Data.Text as Text
+import Numeric (readHex)
 
+many1 :: Alternative f => f a -> f (NonEmpty a)
+many1 p = (:|) <$> p <*> many p
+
+putRawList :: Binary a => [a] -> Put
+putRawList = mapM_ put
+
+putString :: String -> Put
+putString = putRawList
+
+putText :: Text -> Put
+putText = putString . Text.unpack
+
+-- https://datatracker.ietf.org/doc/html/rfc4515#section-3
 instance Binary Filter where
     put f = put '(' >> putf f >> put ')'
       where
         putf :: Filter -> Put
-        putf (And fs) = put '&' >> mapM_ put fs
-        putf (Or fs) = put '|' >> mapM_ put fs
-        putf (Not f) = put '!' >> put f
+        putf (AndFilter fs) = put '&' >> mapM_ put fs
+        putf (OrFilter fs) = put '|' >> mapM_ put fs
+        putf (NotFilter f) = put '!' >> put f
+        putf (SimpleFilter ft AttributeValueAssertion{..}) = do
+            put attributeDesc
+            put ft
+            putText assertionValue
     get = do
-        string "("
-        f <-
-            asum
-                [ andFilter
-                , orFilter
-                , notFilter
-                , simpleFilter
-                --, presentFilter
-                --, substringFilter
-                --, extensibleFilter
-                ]
-        string ")"
+        char '('
+        f <- simpleFilter
+            --asum
+            --    [ andFilter
+            --    , orFilter
+            --    , notFilter
+            --    , simpleFilter
+            --    --, presentFilter
+            --    --, substringFilter
+            --    --, extensibleFilter
+            --    ]
+        char ')'
         return f
       where
-        andFilter = string "&" >> return (And [])
-        orFilter = string "|" >> return (Or [])
-        notFilter = string "!" >> Not <$> get
+        andFilter = char '&' >> AndFilter <$> many1 get
+        orFilter = char '|' >> OrFilter <$> many1 get
+        notFilter = char '!' >> NotFilter <$> get
         simpleFilter = do
-            -- attr <- get
-            -- filterType <- asum
-            --         [ string "=" >> return EqualityMatch
-            --         , string "~=" >> return ApproxMatch
-            --         , string ">=" >> return GreaterOrEqual
-            --         , string "<=" >> return LessOrEqual
-            --         ]
-            -- value <- get
-            --return $ filterType $ AttributeDescription { attributeDesc = attr, attributeOptions = [] }
-            return $ And []
+            attr <- get @AttributeDescription
+            filterType <- get @FilterType
+            value <- get @AssertionValue -- < here we parse Text
+            return $ SimpleFilter filterType $ AttributeValueAssertion
+                { attributeDesc = attr
+                , assertionValue = value
+                }
         --presentFilter =
         --substringFilter =
         --extensibleFilter = 
+
+instance Binary FilterType where
+    put Equal = putString "="
+    put GreaterOrEqual = putString ">="
+    put LessOrEqual = putString "<="
+    put ApproxEqual = putString "~="
+    get = asum
+            [ string "=" >> return Equal
+            , string "~=" >> return ApproxEqual
+            , string ">=" >> return GreaterOrEqual
+            , string "<=" >> return LessOrEqual
+            ]
+
+instance Binary ObjectIdentifier where
+    put (DescrOid t) = putText t
+    put (NumericOid n ns) = putString $ intercalate "." ts
+        where
+            ns' = n : toList ns
+            ts = show <$> ns'
+    get = asum [ numeric, descr ]
+        where
+            numeric = do
+                n0:n1:ns <- decimal `sepBy` char '.'
+                return $ NumericOid n0 (n1 :| ns)
+            descr = do
+                x <- leadKeychar
+                xs <- many keychar
+                return $ DescrOid $ Text.pack $ x : xs
+
+alpha :: Get Char
+alpha = Char8.satisfy isAlpha
+
+digit :: Get Char
+digit = Char8.satisfy isDigit
+
+hexDigit :: Get Char
+hexDigit = Char8.satisfy isHexDigit
+
+hyphen :: Get Char
+hyphen = char '-' >> return '-'
+
+leadKeychar :: Get Char
+leadKeychar = alpha
+
+keychar :: Get Char
+keychar = asum [ alpha, digit, hyphen ]
+
+utf1Subset :: Get Char
+utf1Subset = Char8.satisfy $ not . (`elem` ['\NUL', '(', ')', '*', '\ESC'])  -- fixme: this parses 129-255 too
+
+valueEncoding :: Get Text
+valueEncoding = Text.pack <$> many (normal <|> escaped)
+    where
+        normal = utf1Subset
+        escaped = do
+            Char8.char '\ESC'
+            a <- hexDigit
+            b <- hexDigit
+            c <- hexDigit
+            d <- hexDigit
+            return $ chr $ fst $ head $ readHex [a, b, c, d]
+
+instance Binary AttributeDescription where
+    put AttributeDescription{..} = do
+        put attributeType
+        putText $ Text.intercalate ";" $ "" : attributeOptions
+    get = AttributeDescription <$> get <*> many (char ';' >> getOption)
+        where
+            getOption :: Get Text
+            getOption = Text.pack . toList <$> many1 keychar

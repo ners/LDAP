@@ -57,6 +57,7 @@ library
     , lens
     , template-haskell
     , text
+    , utf8-string
   default-language: Haskell2010
 
 executable LDAP
@@ -75,4 +76,5 @@ executable LDAP
     , lens
     , template-haskell
     , text
+    , utf8-string
   default-language: Haskell2010

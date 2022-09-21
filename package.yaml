@@ -9,6 +9,7 @@ dependencies:
   - lens
   - text
   - template-haskell
+  - utf8-string
 
 library:
   source-dirs: src

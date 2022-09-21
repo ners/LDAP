@@ -1,9 +1,15 @@
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 import Control.Lens
 import qualified Data.Binary as Binary
+import Data.Binary (Binary)
+import Data.ByteString.Lazy (ByteString)
+import qualified Data.Binary.Parser as Binary
+
 import Data.Text (Text)
 
 import LDAP.Schema.AttributeTypes
@@ -29,16 +35,25 @@ instance MayHaveUserPassword User where maybeUserPassword = password . coerced
 makePerson ''User
 makeOrganizationalPerson ''User
 
+decodeFull :: forall a. Binary a => ByteString -> a
+decodeFull = Binary.runGet (Binary.get @a <* Binary.endOfInput)
+
 main :: IO ()
 main = do
     let u = User "Max Mustermann" (Just "foobar")
     let u' = set password (Just "p@$$w0rd") u
     print u'
-    let f =
-            And
-                [ Or []
-                , Not $ Or []
-                ]
-    let bf = Binary.encode f
-    print bf
-    print $ Binary.decode @Filter "(!(&))"
+    print $ Binary.encode $ DescrOid "HelloWorld"
+    print $ Binary.encode $ NumericOid 1 [2, 3, 4, 5]
+    print $ Binary.encode $ AttributeDescription (DescrOid "HelloWorld") ["foo", "bar"]
+    print $ decodeFull @AttributeDescription $ Binary.encode $
+        AttributeDescription (DescrOid "HelloWorld") ["foo", "bar"]
+    print $ Binary.encode $ SimpleFilter ApproxEqual $
+        AttributeValueAssertion
+            (AttributeDescription (DescrOid "HelloWorld") ["foo", "bar"])
+            "textValue"
+    print $ decodeFull @Filter $ Binary.encode $ SimpleFilter ApproxEqual $
+        AttributeValueAssertion
+            (AttributeDescription (DescrOid "HelloWorld") ["foo", "bar"])
+            "textValue"
+    --print $ Binary.decode @Filter "(!(&))"
