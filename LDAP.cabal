@@ -1,0 +1,78 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.7.
+--
+-- see: https://github.com/sol/hpack
+
+name:           LDAP
+version:        0.0.1
+build-type:     Simple
+
+library
+  exposed-modules:
+      LDAP.Schema.Alias
+      LDAP.Schema.ApplicationEntity
+      LDAP.Schema.ApplicationProcess
+      LDAP.Schema.AttributeTypes
+      LDAP.Schema.Binary
+      LDAP.Schema.CertificationAuthority
+      LDAP.Schema.CertificationAuthorityV2
+      LDAP.Schema.Country
+      LDAP.Schema.CRLDistributionPoint
+      LDAP.Schema.DcObject
+      LDAP.Schema.Device
+      LDAP.Schema.DistinguishedName
+      LDAP.Schema.Dmd
+      LDAP.Schema.Domain
+      LDAP.Schema.DSA
+      LDAP.Schema.GroupOfNames
+      LDAP.Schema.GroupOfUniqueNames
+      LDAP.Schema.InetOrgPerson
+      LDAP.Schema.Locality
+      LDAP.Schema.Organization
+      LDAP.Schema.OrganizationalPerson
+      LDAP.Schema.OrganizationalRole
+      LDAP.Schema.OrganizationalUnit
+      LDAP.Schema.Person
+      LDAP.Schema.ResidentialPerson
+      LDAP.Schema.StrongAuthenticationUser
+      LDAP.Schema.Top
+      LDAP.Schema.UserSecurityInformation
+      LDAP.Schema.Util
+      LDAP.Search.Filter
+      LDAP.Search.Filter.Binary
+      LDAP.Search.Request
+      LDAP.Search.Request.Binary
+      LDAP.Search.Result
+  other-modules:
+      Paths_LDAP
+  hs-source-dirs:
+      src
+  ghc-options: -ddump-splices -ddump-to-file -dth-dec-file
+  build-depends:
+      base
+    , binary
+    , binary-parsers
+    , bytestring
+    , lens
+    , template-haskell
+    , text
+  default-language: Haskell2010
+
+executable LDAP
+  main-is: Main.hs
+  other-modules:
+      Paths_LDAP
+  hs-source-dirs:
+      app
+  ghc-options: -ddump-splices -ddump-to-file -dth-dec-file
+  build-depends:
+      LDAP
+    , base
+    , binary
+    , binary-parsers
+    , bytestring
+    , lens
+    , template-haskell
+    , text
+  default-language: Haskell2010

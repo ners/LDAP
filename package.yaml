@@ -1,0 +1,24 @@
+name: LDAP
+version: 0.0.1
+
+dependencies:
+  - base
+  - binary
+  - binary-parsers
+  - bytestring
+  - lens
+  - text
+  - template-haskell
+
+library:
+  source-dirs: src
+
+executable:
+  main: Main.hs
+  source-dirs: app
+  dependencies: LDAP
+
+ghc-options:
+ - -ddump-splices
+ - -ddump-to-file
+ - -dth-dec-file
