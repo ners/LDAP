@@ -14,9 +14,11 @@ import Data.Foldable (asum, toList)
 import Data.List (intersperse, intercalate)
 import Data.List.NonEmpty (NonEmpty(..), fromList)
 import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8')
 import Data.Binary.Parser.Char8 (char)
 import LDAP.Search.Filter
 import qualified Data.Binary.Parser.Char8 as Char8
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import Numeric (readHex)
 
@@ -125,10 +127,12 @@ keychar = asum [ alpha, digit, hyphen ]
 -- concern for multi-byte encoding, then process the UTF-8 byte string as a
 -- whole.
 valueEncoding :: Get Text
-valueEncoding = toText <$> many valueEncodingByte
+valueEncoding = valueEncodingBytes >>= decodeOrFail
     where
-        -- 8-bit chars to Text. TODO: handle decoding error
-        toText = Text.pack . decodeString
+        decodeOrFail :: MonadFail m => BS.ByteString -> m Text
+        decodeOrFail = either (fail . show) return . decodeUtf8'
+        valueEncodingBytes :: Get BS.ByteString
+        valueEncodingBytes = BS.pack <$> many valueEncodingByte
         valueEncodingByte :: Get Char
         valueEncodingByte = escaped <|> normal
         normal =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\\'])
