@@ -66,7 +66,7 @@ instance Binary Filter where
         simpleFilter = do
             attr <- get @AttributeDescription
             filterType <- get @FilterType
-            value <- get @AssertionValue -- < here we parse Text
+            value <- valueEncoding
             return $ SimpleFilter filterType $ AttributeValueAssertion
                 { attributeDesc = attr
                 , assertionValue = value
@@ -121,20 +121,21 @@ leadKeychar = alpha
 keychar :: Get Char
 keychar = asum [ alpha, digit, hyphen ]
 
-utf1Subset :: Get Char
-utf1Subset = Char8.satisfy $ not . (`elem` ['\NUL', '(', ')', '*', '\ESC'])  -- fixme: this parses 129-255 too
-
+-- Idea: the escaped portion of the valueEncoding and the subset exceptions
+-- only apply to ASCII code points. We can thus process it first without any
+-- concern for multi-byte encoding, then process the UTF-8 byte string as a
+-- whole.
 valueEncoding :: Get Text
-valueEncoding = Text.pack <$> many (normal <|> escaped)
+valueEncoding = Text.pack <$> many valueEncodingByte
     where
-        normal = utf1Subset
+        valueEncodingByte = escaped <|> unescaped
+        -- TODO? make excluded characters trigger a parse error by flipping the satisfy check around and failing explicitly
+        unescaped =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\ESC'])
         escaped = do
             Char8.char '\ESC'
             a <- hexDigit
             b <- hexDigit
-            c <- hexDigit
-            d <- hexDigit
-            return $ chr $ fst $ head $ readHex [a, b, c, d]
+            return $ chr $ fst $ head $ readHex [a, b]
 
 instance Binary AttributeDescription where
     put AttributeDescription{..} = do
