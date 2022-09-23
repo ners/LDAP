@@ -131,8 +131,7 @@ valueEncoding = toText <$> many valueEncodingByte
         toText = Text.pack . decodeString
         valueEncodingByte :: Get Char
         valueEncodingByte = escaped <|> normal
-        -- TODO? make excluded characters trigger a parse error by flipping the satisfy check around and failing explicitly
-        normal =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\\'])  --[0x00, 0x28, 0x29, 0x2A, 0x5C])
+        normal =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\\'])
         escaped = do
             Char8.char '\\'
             a <- hexDigit
