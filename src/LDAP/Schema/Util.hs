@@ -78,13 +78,13 @@ makeAttributeType name str =
         , ClassD
             []
             ("MustHave" <> name)
-            [PlainTV a ()]
+            [PlainTV a]
             []
             [SigD lowerName $ lensT (VarT a) (ConT name)]
         , ClassD
             []
             ("MayHave" <> name)
-            [PlainTV a ()]
+            [PlainTV a]
             []
             [ SigD maybeName $ lensT (VarT a) (AppT (ConT ''Maybe) (ConT name))
             , FunD maybeName [Clause [] (NormalB $ lensE (AppE constE $ ConE 'Nothing) constE) []]
@@ -106,7 +106,7 @@ makeObjectClass name typeclasses =
         [ ClassD
             ((\t -> AppT (ConT t) (VarT a)) <$> typeclasses)
             ("Is" <> name)
-            [PlainTV a ()]
+            [PlainTV a]
             []
             []
         , SigD makeName (AppT (AppT ArrowT (ConT ''Name)) (ConT ''DecsQ))
