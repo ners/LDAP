@@ -5,7 +5,7 @@
 
 module LDAP.Search.Filter.Binary where
 
-import Codec.Binary.UTF8.Generic (UTF8Bytes)
+import Codec.Binary.UTF8.String (decodeString)
 import Control.Applicative (many, Alternative((<|>)))
 import Data.Binary
 import Data.Binary.Parser hiding (isDigit, isHexDigit)
@@ -14,10 +14,11 @@ import Data.Foldable (asum, toList)
 import Data.List (intersperse, intercalate)
 import Data.List.NonEmpty (NonEmpty(..), fromList)
 import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8')
 import Data.Binary.Parser.Char8 (char)
 import LDAP.Search.Filter
-import qualified Codec.Binary.UTF8.Generic as UTF8
 import qualified Data.Binary.Parser.Char8 as Char8
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import Numeric (readHex)
 
@@ -66,7 +67,7 @@ instance Binary Filter where
         simpleFilter = do
             attr <- get @AttributeDescription
             filterType <- get @FilterType
-            value <- get @AssertionValue -- < here we parse Text
+            value <- valueEncoding
             return $ SimpleFilter filterType $ AttributeValueAssertion
                 { attributeDesc = attr
                 , assertionValue = value
@@ -121,20 +122,25 @@ leadKeychar = alpha
 keychar :: Get Char
 keychar = asum [ alpha, digit, hyphen ]
 
-utf1Subset :: Get Char
-utf1Subset = Char8.satisfy $ not . (`elem` ['\NUL', '(', ')', '*', '\ESC'])  -- fixme: this parses 129-255 too
-
+-- Idea: the escaped portion of the valueEncoding and the subset exceptions
+-- only apply to ASCII code points. We can thus process it first without any
+-- concern for multi-byte encoding, then process the UTF-8 byte string as a
+-- whole.
 valueEncoding :: Get Text
-valueEncoding = Text.pack <$> many (normal <|> escaped)
+valueEncoding = valueEncodingBytes >>= decodeOrFail
     where
-        normal = utf1Subset
+        decodeOrFail :: MonadFail m => BS.ByteString -> m Text
+        decodeOrFail = either (fail . show) return . decodeUtf8'
+        valueEncodingBytes :: Get BS.ByteString
+        valueEncodingBytes = BS.pack <$> many valueEncodingByte
+        valueEncodingByte :: Get Char
+        valueEncodingByte = escaped <|> normal
+        normal =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\\'])
         escaped = do
-            Char8.char '\ESC'
+            Char8.char '\\'
             a <- hexDigit
             b <- hexDigit
-            c <- hexDigit
-            d <- hexDigit
-            return $ chr $ fst $ head $ readHex [a, b, c, d]
+            return $ chr $ fst $ head $ readHex [a, b]
 
 instance Binary AttributeDescription where
     put AttributeDescription{..} = do
