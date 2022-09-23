@@ -56,4 +56,5 @@ main = do
         AttributeValueAssertion
             (AttributeDescription (DescrOid "HelloWorld") ["foo", "bar"])
             "textValue"
+    print $ decodeFull @Filter $ "(HelloWorld~=hello 𝓊𝓉𝒻 world :\ESC29)"
     --print $ Binary.decode @Filter "(!(&))"
