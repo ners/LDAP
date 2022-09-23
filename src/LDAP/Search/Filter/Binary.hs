@@ -5,7 +5,7 @@
 
 module LDAP.Search.Filter.Binary where
 
-import Codec.Binary.UTF8.Generic (UTF8Bytes)
+import Codec.Binary.UTF8.String (decodeString)
 import Control.Applicative (many, Alternative((<|>)))
 import Data.Binary
 import Data.Binary.Parser hiding (isDigit, isHexDigit)
@@ -16,7 +16,6 @@ import Data.List.NonEmpty (NonEmpty(..), fromList)
 import Data.Text (Text)
 import Data.Binary.Parser.Char8 (char)
 import LDAP.Search.Filter
-import qualified Codec.Binary.UTF8.Generic as UTF8
 import qualified Data.Binary.Parser.Char8 as Char8
 import qualified Data.Text as Text
 import Numeric (readHex)
@@ -126,11 +125,14 @@ keychar = asum [ alpha, digit, hyphen ]
 -- concern for multi-byte encoding, then process the UTF-8 byte string as a
 -- whole.
 valueEncoding :: Get Text
-valueEncoding = Text.pack <$> many valueEncodingByte
+valueEncoding = toText <$> many valueEncodingByte
     where
+        -- 8-bit chars to Text. TODO: handle decoding error
+        toText = Text.pack . decodeString
+        valueEncodingByte :: Get Char
         valueEncodingByte = escaped <|> normal
         -- TODO? make excluded characters trigger a parse error by flipping the satisfy check around and failing explicitly
-        normal =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\\'])
+        normal =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\\'])  --[0x00, 0x28, 0x29, 0x2A, 0x5C])
         escaped = do
             Char8.char '\\'
             a <- hexDigit
