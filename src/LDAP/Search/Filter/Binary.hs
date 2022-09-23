@@ -128,9 +128,9 @@ keychar = asum [ alpha, digit, hyphen ]
 valueEncoding :: Get Text
 valueEncoding = Text.pack <$> many valueEncodingByte
     where
-        valueEncodingByte = escaped <|> unescaped
+        valueEncodingByte = escaped <|> normal
         -- TODO? make excluded characters trigger a parse error by flipping the satisfy check around and failing explicitly
-        unescaped =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\\'])
+        normal =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\\'])
         escaped = do
             Char8.char '\\'
             a <- hexDigit
