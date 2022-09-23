@@ -130,9 +130,9 @@ valueEncoding = Text.pack <$> many valueEncodingByte
     where
         valueEncodingByte = escaped <|> unescaped
         -- TODO? make excluded characters trigger a parse error by flipping the satisfy check around and failing explicitly
-        unescaped =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\ESC'])
+        unescaped =  Char8.satisfy (`notElem` ['\NUL', '(', ')', '*', '\\'])
         escaped = do
-            Char8.char '\ESC'
+            Char8.char '\\'
             a <- hexDigit
             b <- hexDigit
             return $ chr $ fst $ head $ readHex [a, b]
