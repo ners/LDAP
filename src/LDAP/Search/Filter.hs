@@ -2,6 +2,7 @@ module LDAP.Search.Filter where
 
 import Data.Text (Text)
 import Data.List.NonEmpty (NonEmpty)
+import Numeric.Natural (Natural)
 
 type LdapString = Text
 
@@ -18,34 +19,34 @@ data Filter
     | Substrings SubstringFilter
     | Present AttributeDescription
     | ExtensibleMatch MatchingRuleAssertion
-    deriving (Show)
+    deriving (Eq, Show)
 
 data FilterType
     = Equal
     | GreaterOrEqual
     | LessOrEqual
     | ApproxEqual
-    deriving (Show)
+    deriving (Eq, Show, Enum, Bounded)
 
 -- https://datatracker.ietf.org/doc/html/rfc4511#appendix-B
 data AttributeValueAssertion = AttributeValueAssertion
     { attributeDesc :: AttributeDescription
     , assertionValue :: AssertionValue
     }
-    deriving (Show)
+    deriving (Eq, Show)
 
 -- https://datatracker.ietf.org/doc/html/rfc4512#section-2.5
 data AttributeDescription = AttributeDescription
     { attributeType :: ObjectIdentifier
     , attributeOptions :: [Text]
     }
-    deriving (Show)
+    deriving (Eq, Show)
 
 -- https://datatracker.ietf.org/doc/html/rfc4512#section-1.4
 data ObjectIdentifier
     = DescrOid Text
-    | NumericOid Int (NonEmpty Int)
-    deriving (Show)
+    | NumericOid Natural (NonEmpty Natural)
+    deriving (Eq, Show)
 
 -- https://datatracker.ietf.org/doc/html/rfc4511#section-4.5.1
 data SubstringFilter = SubstringFilter
@@ -54,7 +55,7 @@ data SubstringFilter = SubstringFilter
     , substringFilterAny :: [AssertionValue]
     , substringFilterFinal :: Maybe AssertionValue
     }
-    deriving (Show)
+    deriving (Eq, Show)
 
 -- https://datatracker.ietf.org/doc/html/rfc4511#section-4.5.1
 data MatchingRuleAssertion = MatchingRuleAssertion
@@ -63,4 +64,4 @@ data MatchingRuleAssertion = MatchingRuleAssertion
     , matchingRuleValue :: AssertionValue
     , matchingRuleDnAttributes :: Bool
     }
-    deriving (Show)
+    deriving (Eq, Show)

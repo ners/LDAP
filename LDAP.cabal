@@ -78,3 +78,26 @@ executable LDAP
     , text
     , utf8-string
   default-language: Haskell2010
+
+test-suite ldap-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_LDAP
+  hs-source-dirs:
+      test
+  ghc-options: -ddump-splices -ddump-to-file -dth-dec-file
+  build-depends:
+      LDAP
+    , QuickCheck
+    , base
+    , binary
+    , binary-parsers
+    , bytestring
+    , hspec
+    , lens
+    , quickcheck-instances
+    , template-haskell
+    , text
+    , utf8-string
+  default-language: Haskell2010

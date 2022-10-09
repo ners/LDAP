@@ -43,19 +43,3 @@ main = do
     let u = User "Max Mustermann" (Just "foobar")
     let u' = set password (Just "p@$$w0rd") u
     print u'
-    print $ Binary.encode $ DescrOid "HelloWorld"
-    print $ Binary.encode $ NumericOid 1 [2, 3, 4, 5]
-    print $ Binary.encode $ AttributeDescription (DescrOid "HelloWorld") ["foo", "bar"]
-    print $ decodeFull @AttributeDescription $ Binary.encode $
-        AttributeDescription (DescrOid "HelloWorld") ["foo", "bar"]
-    print $ Binary.encode $ SimpleFilter ApproxEqual $
-        AttributeValueAssertion
-            (AttributeDescription (DescrOid "HelloWorld") ["foo", "bar"])
-            "textValue"
-    print $ decodeFull @Filter $ Binary.encode $ SimpleFilter ApproxEqual $
-        AttributeValueAssertion
-            (AttributeDescription (DescrOid "HelloWorld") ["foo", "bar"])
-            "textValue"
-    -- filter value is "hello \120010\120009\119995 world :)"
-    print $ decodeFull @Filter $ "(HelloWorld~=hello \xF0\x9D\x93\x8A\xF0\x9D\x93\x89\xF0\x9D\x92\xBB world :\\29)"
-    --print $ Binary.decode @Filter "(!(&))"

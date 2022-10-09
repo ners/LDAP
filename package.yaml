@@ -19,6 +19,16 @@ executable:
   source-dirs: app
   dependencies: LDAP
 
+tests:
+  ldap-tests:
+    main: Main.hs
+    source-dirs: test
+    dependencies:
+      - LDAP
+      - QuickCheck
+      - quickcheck-instances
+      - hspec
+
 ghc-options:
  - -ddump-splices
  - -ddump-to-file

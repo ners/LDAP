@@ -5,11 +5,11 @@
 
 module LDAP.Search.Filter.Binary where
 
-import Codec.Binary.UTF8.String (decodeString)
+import Codec.Binary.UTF8.String (decodeString, encodeString)
 import Control.Applicative (many, Alternative((<|>)))
 import Data.Binary
 import Data.Binary.Parser hiding (isDigit, isHexDigit)
-import Data.Char (isAlpha, isDigit, isHexDigit, chr)
+import Data.Char (isAlpha, isDigit, isHexDigit, chr, ord)
 import Data.Foldable (asum, toList)
 import Data.List (intersperse, intercalate)
 import Data.List.NonEmpty (NonEmpty(..), fromList)
@@ -20,7 +20,7 @@ import LDAP.Search.Filter
 import qualified Data.Binary.Parser.Char8 as Char8
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
-import Numeric (readHex)
+import Numeric (readHex, showHex)
 
 many1 :: Alternative f => f a -> f (NonEmpty a)
 many1 p = (:|) <$> p <*> many p
@@ -45,10 +45,10 @@ instance Binary Filter where
         putf (SimpleFilter ft AttributeValueAssertion{..}) = do
             put attributeDesc
             put ft
-            putText assertionValue
+            putValue assertionValue
     get = do
         char '('
-        f <- simpleFilter
+        f <- andFilter <|> orFilter <|> notFilter <|> simpleFilter
             --asum
             --    [ andFilter
             --    , orFilter
@@ -75,6 +75,15 @@ instance Binary Filter where
         --presentFilter =
         --substringFilter =
         --extensibleFilter = 
+
+putValue :: AssertionValue -> Put
+putValue t = mapM_ putValueChar $ Text.unpack t
+    where
+        putValueChar c
+            | c `elem` ['\NUL', '(', ')', '*', '\\'] = putString $ "\\" <> showHexChar c
+            | otherwise = put c
+        showHexChar c = lpad (showHex (ord c) "") '0' 2
+        lpad xs x n = reverse $ take n $ reverse xs ++ repeat x
 
 instance Binary FilterType where
     put Equal = putString "="
